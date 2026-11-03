@@ -1,0 +1,42 @@
+-- =====================================================================
+-- Database Setup Script for Product Management System (PMS)
+-- Created for ASP.NET Core Razor Pages & ADO.NET Repository Pattern Task
+-- =====================================================================
+
+-- 1. Create PMS Database (if not exists)
+IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'PMS')
+BEGIN
+    CREATE DATABASE PMS;
+END
+GO
+
+USE [PMS];
+GO
+
+-- 2. Create products table
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'products')
+BEGIN
+    CREATE TABLE [dbo].[products] (
+        [Id]          INT           IDENTITY (1, 1) NOT NULL,
+        [Title]       VARCHAR (50)  NOT NULL,
+        [description] VARCHAR (255) NOT NULL,
+        [image]       VARCHAR (255) NOT NULL,
+        [price]       INT           NOT NULL,
+        [quantity]    INT           NOT NULL,
+        [status]      VARCHAR (50)  NOT NULL,
+        PRIMARY KEY CLUSTERED ([Id] ASC)
+    );
+END
+GO
+
+-- 3. Verify Table Structure
+SELECT * FROM [dbo].[products];
+GO
+
+-- Notes / Steps Followed from Tutorial:
+-- 1. Install ADO.NET package: Install-Package Microsoft.Data.SqlClient
+-- 2. Configure connection string in appsettings.json
+-- 3. Implement Product model and Data Annotations
+-- 4. Implement ProductRepository with ADO.NET CRUD operations
+-- 5. Implement ProductImageService for image uploads in wwwroot/images/products
+-- 6. Register scoped dependencies in Program.cs

@@ -1,0 +1,143 @@
+@page
+@model Product_Managemnet_System_Razor_Core.Pages.Products.IndexModel
+
+@{
+    ViewData["Title"] = "Product Catalog";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1 text-dark fw-bold">
+            <i class="bi bi-boxes text-primary me-2"></i>Product Catalog
+        </h2>
+        <p class="text-muted mb-0 small">Manage your store inventory with CRUD operations & repository pattern</p>
+    </div>
+    <a asp-page="Create" class="btn btn-primary px-3 shadow-sm">
+        <i class="bi bi-plus-circle me-1"></i> Add New Product
+    </a>
+</div>
+
+@* Display temporary feedback message if set from Create/Edit/Delete actions *@
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm mb-4" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i> @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (Model.Products.Count == 0)
+{
+    <div class="card border-0 shadow-sm text-center py-5">
+        <div class="card-body">
+            <i class="bi bi-inbox text-muted display-4 mb-3 d-block"></i>
+            <h5 class="fw-semibold text-secondary">No Products Found</h5>
+            <p class="text-muted small">Your inventory is currently empty. Click below to add your first product.</p>
+            <a asp-page="Create" class="btn btn-outline-primary mt-2">
+                <i class="bi bi-plus-lg me-1"></i> Add Product
+            </a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3" style="width: 60px;">#ID</th>
+                            <th style="width: 100px;">Photo</th>
+                            <th>Product Details</th>
+                            <th>Price</th>
+                            <th>Stock</th>
+                            <th>Status</th>
+                            <th class="text-end pe-3" style="width: 220px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var product in Model.Products)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold text-muted">@product.Id</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(product.image))
+                                    {
+                                        <img src="@Url.Content("~/" + product.image)"
+                                             alt="@product.Title"
+                                             class="rounded border shadow-sm"
+                                             style="width:65px; height:65px; object-fit:cover;" />
+                                    }
+                                    else
+                                    {
+                                        <div class="bg-light rounded border text-muted d-flex align-items-center justify-content-center"
+                                             style="width:65px; height:65px;">
+                                            <i class="bi bi-image"></i>
+                                        </div>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark">@product.Title</div>
+                                    <small class="text-muted text-truncate d-inline-block" style="max-width: 280px;">
+                                        @product.description
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="fw-semibold text-success">@product.price.ToString("N0")</span>
+                                </td>
+                                <td>
+                                    @if (product.quantity > 5)
+                                    {
+                                        <span class="badge bg-light text-dark border">@product.quantity in stock</span>
+                                    }
+                                    else if (product.quantity > 0)
+                                    {
+                                        <span class="badge bg-warning text-dark">Low: @product.quantity</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Out of stock</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (product.status == "A" || product.status == "Available" || product.status == "Active")
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                            <i class="bi bi-dot"></i> Active
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                                            <i class="bi bi-dot"></i> Inactive
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end pe-3">
+                                    <div class="btn-group btn-group-sm">
+                                        <a asp-page="Details" asp-route-id="@product.Id"
+                                           class="btn btn-outline-info" title="View Details">
+                                            <i class="bi bi-eye"></i> Details
+                                        </a>
+                                        <a asp-page="Edit" asp-route-id="@product.Id"
+                                           class="btn btn-outline-warning" title="Edit Product">
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </a>
+                                        <a asp-page="Delete" asp-route-id="@product.Id"
+                                           class="btn btn-outline-danger" title="Delete Product">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white text-muted small py-2">
+            Showing @Model.Products.Count product(s) in database
+        </div>
+    </div>
+}
