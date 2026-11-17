@@ -22,9 +22,16 @@ Based on [Lab 9 video](https://www.youtube.com/watch?v=R0g0CKz-uiU)
 - `Views/Products/*` - MVC Razor views using tag helpers and unobtrusive validation.
 - `Program.cs` - `AddControllersWithViews()` + scoped `ProductRepository` registered for dependency injection.
 - Default route: `/Products` (via `{controller=Products}/{action=Index}/{id?}`).
+- Targets **.NET 8 (`net8.0`)** so it opens in **Visual Studio 2022** with the standard ASP.NET Core MVC template.
 
-Run it with:
+### Open in Visual Studio 2022
+1. Double-click **`PMS_MVC_Lab9.sln`** in the repository root (classic Visual Studio solution).
+2. Wait for NuGet restore to finish.
+3. Press **F5** (or `Ctrl+F5`) to run. The app opens at **http://localhost:5000**.
+4. Before running, execute `PMS_MVC_Lab9/pms script.txt` in SQL Server to create the `PMS` database/table.
+5. If using a different SQL Server instance, update `DefaultConnection` in `PMS_MVC_Lab9/appsettings.json`.
 
+### Command line
 ```bash
 cd PMS_MVC_Lab9
 dotnet restore
@@ -32,8 +39,7 @@ dotnet build
 dotnet run
 ```
 
-Or double-click `run-lab9.bat` in the repository root, then open **http://localhost:5000**.
-The SQL script is in `PMS_MVC_Lab9/pms script.txt` (same `PMS` database/table as the Razor Pages version).
+Or double-click `run-lab9.bat` in the repository root.
 
 ---
 
@@ -56,7 +62,7 @@ The SQL script is in `PMS_MVC_Lab9/pms script.txt` (same `PMS` database/table as
 
 | Layer | Technology |
 | --- | --- |
-| Framework | ASP.NET Core 10 (Razor Pages) |
+| Framework | ASP.NET Core 10 (Razor Pages) and ASP.NET Core 8 MVC (Lab 9) |
 | Language | C# |
 | Database | Microsoft SQL Server / LocalDB |
 | Data access | ADO.NET (`Microsoft.Data.SqlClient` 7.1.1) |
@@ -69,10 +75,21 @@ The SQL script is in `PMS_MVC_Lab9/pms script.txt` (same `PMS` database/table as
 
 ```
 PMS_CRUD_Razor_RepositoryDP/
-├── ProductManagementSystem.slnx              # Solution file
-├── run.bat                                   # Build & run helper for Windows
+├── ProductManagementSystem.slnx              # .slnx solution (all projects)
+├── PMS_MVC_Lab9.sln                          # Classic .sln for Visual Studio 2022 (Lab 9)
+├── README.md
+├── run.bat                                   # Run Razor Pages app
+├── run-lab9.bat                              # Run MVC Lab 9 app
+├── PMS_MVC_Lab9/                             # Lab 9 - MVC + Repository + ADO.NET
+│   ├── Controllers/                          # HomeController, ProductsController
+│   ├── Data/ProductRepository.cs             # Parameterized CRUD queries
+│   ├── Models/Product.cs                     # Entity + validation attributes
+│   ├── Views/Products/                       # Index, Create, Details, Edit, Delete
+│   ├── wwwroot/lib/                          # Bootstrap, jQuery, validation scripts
+│   ├── appsettings.json                      # Connection string
+│   ├── pms script.txt                        # SQL script (database + table)
+│   └── PMS_MVC_Lab9.csproj                   # net8.0 web project
 └── PMS_CRUD_Razor_RepositoryDP-main/
-    ├── README.md
     └── Product_Managemnet_System_Razor_Core/
         ├── Data/
         │   ├── ProductRepository.cs          # ADO.NET data access (Repository Pattern)
@@ -96,7 +113,8 @@ PMS_CRUD_Razor_RepositoryDP/
 
 ### Prerequisites
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [.NET 8 SDK](https://dotnet.microsoft.com/download) for Lab 9 (MVC) or [.NET 10 SDK](https://dotnet.microsoft.com/download) for the Razor Pages version
+- Visual Studio 2022 (or newer) — open `PMS_MVC_Lab9.sln` for Lab 9
 - SQL Server (LocalDB, Express, or full edition)
 - Visual Studio 2022+ (optional) or any editor
 
