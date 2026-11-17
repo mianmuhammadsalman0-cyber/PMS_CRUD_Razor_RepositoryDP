@@ -1,4 +1,4 @@
-name: Lab 9 MVC - Build and Smoke Test
+name: Lab 9 MVC - Build and Full CRUD Test
 
 on:
   push:
@@ -7,9 +7,22 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  SA_PASSWORD: Lab9@12345
+
 jobs:
-  build-and-smoke-test:
+  build-and-crud-test:
     runs-on: ubuntu-latest
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: Lab9@12345
+          MSSQL_PID: Developer
+        ports:
+          - 1433:1433
 
     steps:
       - name: Checkout repository
@@ -20,18 +33,49 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Install sqlcmd
+        run: |
+          curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+            | gpg --dearmor | sudo tee /usr/share/keyrings/microsoft-prod.gpg > /dev/null
+          curl -fsSL https://packages.microsoft.com/config/ubuntu/24.04/prod.list \
+            | sudo tee /etc/apt/sources.list.d/mssql-release.list
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y mssql-tools18 unixodbc-dev
+          echo "/opt/mssql-tools18/bin" >> "$GITHUB_PATH"
+
+      - name: Create PMS database schema
+        run: |
+          set -e
+          ready=false
+          for i in $(seq 1 40); do
+            if sqlcmd -S localhost,1433 -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1; then
+              echo "SQL Server ready after $((i * 2))s"
+              ready=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != true ]; then
+            echo "SQL Server did not start in time"
+            exit 1
+          fi
+          sqlcmd -S localhost,1433 -U sa -P "$SA_PASSWORD" -C -i PMS_MVC_Lab9/schema.sql
+          echo "Database schema created."
+
       - name: Restore
         run: dotnet restore PMS_MVC_Lab9.sln
 
       - name: Build Lab 9 MVC project
         run: dotnet build PMS_MVC_Lab9.sln --no-restore --configuration Release
 
-      - name: Run app and smoke test routes
+      - name: Run app and full CRUD test
         run: |
           set -e
 
-          export ASPNETCORE_URLS=http://127.0.0.1:5080
+          base=http://127.0.0.1:5080
+          export ASPNETCORE_URLS="$base"
           export ASPNETCORE_ENVIRONMENT=Development
+          export ConnectionStrings__DefaultConnection="Server=localhost,1433;Database=PMS;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;"
 
           dotnet run --project PMS_MVC_Lab9/PMS_MVC_Lab9.csproj \
             --no-build --configuration Release --no-launch-profile \
@@ -41,14 +85,13 @@ jobs:
 
           ready=false
           for i in $(seq 1 30); do
-            if curl -fsS -o /dev/null http://127.0.0.1:5080/Home/Index; then
+            if curl -fsS -o /dev/null "$base/Home/Index"; then
               echo "App is up after ${i}s"
               ready=true
               break
             fi
             sleep 1
           done
-
           if [ "$ready" != true ]; then
             echo "App did not start in time:"
             cat app.log
@@ -57,29 +100,98 @@ jobs:
 
           check_status() {
             local path="$1"
+            local expected="${2:-200}"
             local code
-            code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:5080${path}")
-            echo "GET ${path} -> ${code}"
-            [ "$code" = "200" ]
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$base$path")
+            echo "GET ${path} -> ${code} (expected ${expected})"
+            [ "$code" = "$expected" ]
           }
 
-          check_contains() {
-            local path="$1"
-            local text="$2"
-            curl -fsS "http://127.0.0.1:5080${path}" | grep -q "$text"
-            echo "GET ${path} contains '${text}'"
+          token_from() {
+            local file="$1"
+            local token
+            token=$(sed -n 's/.*name="__RequestVerificationToken"[^>]*value="\([^"]*\)".*/\1/p' "$file" | head -n 1)
+            if [ -z "$token" ]; then
+              token=$(sed -n 's/.*value="\([^"]*\)"[^>]*name="__RequestVerificationToken".*/\1/p' "$file" | head -n 1)
+            fi
+            printf '%s' "$token"
           }
 
+          # Basic pages and static files
           check_status /Home/Index
-          check_contains /Home/Index "Product Management System"
+          curl -fsS "$base/Home/Index" | grep -q "Product Management System"
 
+          check_status /Products
           check_status /Products/Create
-          check_contains /Products/Create "Create Product"
-
           check_status /lib/bootstrap/dist/css/bootstrap.min.css
           check_status /lib/jquery/dist/jquery.min.js
 
-          echo "All smoke tests passed."
+          # CREATE
+          curl -fsS -c cookies.txt "$base/Products/Create" > create.html
+          token=$(token_from create.html)
+          [ -n "$token" ] || { echo "Create anti-forgery token missing"; exit 1; }
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' -b cookies.txt -c cookies.txt \
+            --data-urlencode "__RequestVerificationToken=$token" \
+            --data-urlencode "Title=Lab9 Test Product" \
+            --data-urlencode "Description=Created by smoke test" \
+            --data-urlencode "Image=/images/test.png" \
+            --data-urlencode "Price=100" \
+            --data-urlencode "Quantity=5" \
+            --data-urlencode "Status=Active" \
+            "$base/Products/Create")
+          echo "POST /Products/Create -> ${code}"
+          [ "$code" = "302" ]
+
+          curl -fsS "$base/Products" > products.html
+          grep -q "Lab9 Test Product" products.html
+          id=$(grep -oP 'Products/Edit/\K[0-9]+' products.html | head -n 1)
+          [ -n "$id" ] || { echo "Created product id not found"; exit 1; }
+          echo "Created product id: ${id}"
+
+          # READ
+          check_status "/Products/Details/${id}"
+          curl -fsS "$base/Products/Details/${id}" | grep -q "Lab9 Test Product"
+
+          # UPDATE
+          curl -fsS -b cookies.txt -c cookies.txt "$base/Products/Edit/${id}" > edit.html
+          token=$(token_from edit.html)
+          [ -n "$token" ] || { echo "Edit anti-forgery token missing"; exit 1; }
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' -b cookies.txt -c cookies.txt \
+            --data-urlencode "__RequestVerificationToken=$token" \
+            --data-urlencode "Id=${id}" \
+            --data-urlencode "Title=Lab9 Updated Product" \
+            --data-urlencode "Description=Updated by smoke test" \
+            --data-urlencode "Image=/images/test.png" \
+            --data-urlencode "Price=250" \
+            --data-urlencode "Quantity=9" \
+            --data-urlencode "Status=Active" \
+            "$base/Products/Edit/${id}")
+          echo "POST /Products/Edit/${id} -> ${code}"
+          [ "$code" = "302" ]
+
+          check_status "/Products/Details/${id}"
+          curl -fsS "$base/Products/Details/${id}" | grep -q "Lab9 Updated Product"
+
+          # DELETE
+          curl -fsS -b cookies.txt -c cookies.txt "$base/Products/Delete/${id}" > delete.html
+          token=$(token_from delete.html)
+          [ -n "$token" ] || { echo "Delete anti-forgery token missing"; exit 1; }
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' -b cookies.txt -c cookies.txt \
+            --data-urlencode "__RequestVerificationToken=$token" \
+            "$base/Products/Delete/${id}")
+          echo "POST /Products/Delete/${id} -> ${code}"
+          [ "$code" = "302" ]
+
+          check_status "/Products/Details/${id}" 404
+          if curl -fsS "$base/Products" | grep -q "Lab9 Updated Product"; then
+            echo "Deleted product still appears in the list"
+            exit 1
+          fi
+
+          echo "Full CRUD smoke test passed."
 
       - name: Upload app log on failure
         if: failure()
