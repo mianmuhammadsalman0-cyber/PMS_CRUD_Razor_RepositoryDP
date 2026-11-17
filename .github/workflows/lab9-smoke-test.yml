@@ -1,0 +1,84 @@
+name: Lab 9 MVC - Build and Smoke Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-smoke-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore PMS_MVC_Lab9.sln
+
+      - name: Build Lab 9 MVC project
+        run: dotnet build PMS_MVC_Lab9.sln --no-restore --configuration Release
+
+      - name: Start app
+        run: |
+          export ASPNETCORE_URLS=http://127.0.0.1:5080
+          export ASPNETCORE_ENVIRONMENT=Development
+          dotnet run --project PMS_MVC_Lab9/PMS_MVC_Lab9.csproj \
+            --no-build --configuration Release --no-launch-profile \
+            > app.log 2>&1 &
+          echo $! > app.pid
+
+      - name: Wait for app to respond
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:5080/Home/Index > /dev/null; then
+              echo "App is up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "App did not start in time:"
+          cat app.log
+          exit 1
+
+      - name: Smoke test routes
+        run: |
+          set -e
+
+          check_status() {
+            local path="$1"
+            local file="/tmp$(printf '%s' "$path" | tr '/' '_').html"
+            local code
+            code=$(curl -s -o "$file" -w '%{http_code}' "http://127.0.0.1:5080${path}")
+            echo "GET ${path} -> ${code} (${file})"
+            [ "$code" = "200" ]
+          }
+
+          check_status /Home/Index
+          grep -q "Product Management System" /tmp/_Home_Index.html
+
+          check_status /Products/Create
+          grep -q "Create Product" /tmp/_Products_Create.html
+
+          check_status /lib/bootstrap/dist/css/bootstrap.min.css
+          check_status /lib/jquery/dist/jquery.min.js
+
+          echo "All smoke tests passed."
+
+      - name: Stop app
+        if: always()
+        run: kill "$(cat app.pid)" 2>/dev/null || true
+
+      - name: Upload app log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-log
+          path: app.log
