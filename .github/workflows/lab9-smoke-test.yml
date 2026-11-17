@@ -26,55 +26,60 @@ jobs:
       - name: Build Lab 9 MVC project
         run: dotnet build PMS_MVC_Lab9.sln --no-restore --configuration Release
 
-      - name: Start app
-        run: |
-          export ASPNETCORE_URLS=http://127.0.0.1:5080
-          export ASPNETCORE_ENVIRONMENT=Development
-          dotnet run --project PMS_MVC_Lab9/PMS_MVC_Lab9.csproj \
-            --no-build --configuration Release --no-launch-profile \
-            > app.log 2>&1 &
-          echo $! > app.pid
-
-      - name: Wait for app to respond
-        run: |
-          for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:5080/Home/Index > /dev/null; then
-              echo "App is up after ${i}s"
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "App did not start in time:"
-          cat app.log
-          exit 1
-
-      - name: Smoke test routes
+      - name: Run app and smoke test routes
         run: |
           set -e
 
+          export ASPNETCORE_URLS=http://127.0.0.1:5080
+          export ASPNETCORE_ENVIRONMENT=Development
+
+          dotnet run --project PMS_MVC_Lab9/PMS_MVC_Lab9.csproj \
+            --no-build --configuration Release --no-launch-profile \
+            > app.log 2>&1 &
+          APP_PID=$!
+          trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
+
+          ready=false
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null http://127.0.0.1:5080/Home/Index; then
+              echo "App is up after ${i}s"
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$ready" != true ]; then
+            echo "App did not start in time:"
+            cat app.log
+            exit 1
+          fi
+
           check_status() {
             local path="$1"
-            local file="/tmp$(printf '%s' "$path" | tr '/' '_').html"
             local code
-            code=$(curl -s -o "$file" -w '%{http_code}' "http://127.0.0.1:5080${path}")
-            echo "GET ${path} -> ${code} (${file})"
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:5080${path}")
+            echo "GET ${path} -> ${code}"
             [ "$code" = "200" ]
           }
 
+          check_contains() {
+            local path="$1"
+            local text="$2"
+            curl -fsS "http://127.0.0.1:5080${path}" | grep -q "$text"
+            echo "GET ${path} contains '${text}'"
+          }
+
           check_status /Home/Index
-          grep -q "Product Management System" /tmp/_Home_Index.html
+          check_contains /Home/Index "Product Management System"
 
           check_status /Products/Create
-          grep -q "Create Product" /tmp/_Products_Create.html
+          check_contains /Products/Create "Create Product"
 
           check_status /lib/bootstrap/dist/css/bootstrap.min.css
           check_status /lib/jquery/dist/jquery.min.js
 
           echo "All smoke tests passed."
-
-      - name: Stop app
-        if: always()
-        run: kill "$(cat app.pid)" 2>/dev/null || true
 
       - name: Upload app log on failure
         if: failure()
