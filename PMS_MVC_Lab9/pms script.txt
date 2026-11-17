@@ -1,0 +1,39 @@
+Lab 9 - Product Management System (ASP.NET Core MVC + Repository Pattern + ADO.NET)
+
+1) Create the database and table in SQL Server (SSMS / Azure Data Studio):
+
+CREATE DATABASE PMS;
+GO
+USE PMS;
+GO
+CREATE TABLE [dbo].[products] (
+    [Id]          INT           IDENTITY (1, 1) NOT NULL,
+    [Title]       VARCHAR (50)  NOT NULL,
+    [description] VARCHAR (255) NOT NULL,
+    [image]       VARCHAR (255) NOT NULL,
+    [price]       INT           NOT NULL,
+    [quantity]    INT           NOT NULL,
+    [status]      VARCHAR (50)  NOT NULL,
+    PRIMARY KEY CLUSTERED ([Id] ASC)
+);
+GO
+
+2) Check the connection string in appsettings.json (DefaultConnection).
+   The default uses LocalDB:
+   Server=(localdb)\MSSQLLocalDB;Database=PMS;Trusted_Connection=True;TrustServerCertificate=True;
+
+3) Build and run:
+   dotnet restore
+   dotnet build
+   dotnet run
+
+4) Open http://localhost:5000/ (or the HTTPS URL printed by dotnet run).
+
+Implementation steps (as shown in the Lab 9 video):
+   - Create an ASP.NET Core MVC project
+   - Product.cs model with Data Annotations
+   - Data/ProductRepository.cs using parameterized ADO.NET queries
+   - Register the repository in Program.cs (dependency injection)
+   - Controllers/ProductsController.cs with CRUD actions
+   - Razor views under Views/Products (Index, Create, Details, Edit, Delete)
+   - Enable MVC tag helpers in Views/_ViewImports.cshtml

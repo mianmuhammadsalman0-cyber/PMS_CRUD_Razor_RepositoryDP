@@ -1,6 +1,39 @@
 # Product Management System (PMS)
 
-A web application built with **ASP.NET Core 10 Razor Pages** that demonstrates the **Repository Design Pattern** combined with **ADO.NET** for fast, direct database access to **SQL Server**. The UI is built with **Bootstrap 5** and supports full product CRUD operations, including image upload and cleanup.
+This repository contains two versions of the same Product Management System:
+
+| Folder | Version | Lab |
+| --- | --- | --- |
+| `PMS_CRUD_Razor_RepositoryDP-main/Product_Managemnet_System_Razor_Core` | ASP.NET Core Razor Pages + ADO.NET + Repository Pattern | Previous lab |
+| `PMS_MVC_Lab9` | **ASP.NET Core MVC + ADO.NET + Repository Pattern** | **Lab 9** |
+
+Both use **SQL Server**, **Bootstrap 5**, Data Annotations validation and full product CRUD.
+
+---
+
+## Lab 9 - MVC version (`PMS_MVC_Lab9`)
+
+Based on [Lab 9 video](https://www.youtube.com/watch?v=R0g0CKz-uiU)
+(reference source: [PMS_MVC_Example_Lab9](https://github.com/MuhammadUmarHayat/PMS_MVC_Example_Lab9)).
+
+- `Controllers/ProductsController.cs` - `Index`, `Create`, `Details`, `Edit`, `Delete` actions with `TempData` success messages.
+- `Data/ProductRepository.cs` - all CRUD SQL in one place, parameterized with `Microsoft.Data.SqlClient`.
+- `Models/Product.cs` - entity with validation attributes.
+- `Views/Products/*` - MVC Razor views using tag helpers and unobtrusive validation.
+- `Program.cs` - `AddControllersWithViews()` + scoped `ProductRepository` registered for dependency injection.
+- Default route: `/Products` (via `{controller=Products}/{action=Index}/{id?}`).
+
+Run it with:
+
+```bash
+cd PMS_MVC_Lab9
+dotnet restore
+dotnet build
+dotnet run
+```
+
+Or double-click `run-lab9.bat` in the repository root, then open **http://localhost:5000**.
+The SQL script is in `PMS_MVC_Lab9/pms script.txt` (same `PMS` database/table as the Razor Pages version).
 
 ---
 

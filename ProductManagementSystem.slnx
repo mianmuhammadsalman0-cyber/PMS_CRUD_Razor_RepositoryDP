@@ -2,4 +2,7 @@
   <Folder Name="/PMS_CRUD_Razor_RepositoryDP-main/">
     <Project Path="PMS_CRUD_Razor_RepositoryDP-main/Product_Managemnet_System_Razor_Core/Product_Managemnet_System_Razor_Core.csproj" />
   </Folder>
+  <Folder Name="/PMS_MVC_Lab9/">
+    <Project Path="PMS_MVC_Lab9/PMS_MVC_Lab9.csproj" />
+  </Folder>
 </Solution>

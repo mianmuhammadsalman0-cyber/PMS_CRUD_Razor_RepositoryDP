@@ -1,0 +1,83 @@
+@model IEnumerable<Product>
+@{
+    ViewData["Title"] = "Products";
+
+    string ImageUrl(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return string.Empty;
+        }
+
+        if (path.StartsWith("http", StringComparison.OrdinalIgnoreCase) || path.StartsWith('/'))
+        {
+            return path;
+        }
+
+        return "/" + path.TrimStart('~', '/');
+    }
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Product Management</h2>
+    <a asp-action="Create" class="btn btn-primary">+ Add Product</a>
+</div>
+
+@if (TempData["Success"] is string success)
+{
+    <div class="alert alert-success alert-dismissible fade show">
+        @success
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="table-responsive">
+    <table class="table table-bordered table-striped table-hover align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th>
+                <th>Image</th>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.Id</td>
+                    <td>
+                        @if (!string.IsNullOrWhiteSpace(item.Image))
+                        {
+                            <img src="@ImageUrl(item.Image)" alt="@item.Title"
+                                 class="rounded" style="width:65px;height:55px;object-fit:cover" />
+                        }
+                    </td>
+                    <td>@item.Title</td>
+                    <td>@item.Description</td>
+                    <td>@item.Price.ToString("N0")</td>
+                    <td>@item.Quantity</td>
+                    <td><span class="badge bg-success">@item.Status</span></td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info btn-sm">Details</a>
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-warning btn-sm">Edit</a>
+                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-danger btn-sm">Delete</a>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        No products found. Click <strong>Add Product</strong> to create the first one.
+    </div>
+}
